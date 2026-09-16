@@ -1,0 +1,2346 @@
+{
+  "info": {
+    "name": "Tenant EXP \u2014 key-value scenario",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Setup",
+      "item": [
+        {
+          "name": "01 Login \u2014 Tenant User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/auth/login",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{user_email}}\",\n  \"password\": \"{{user_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"Response has access_token\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"access_token\");",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "var json = pm.response.json();",
+                  "pm.environment.set('user_token', json.access_token);",
+                  "if (json.refresh_token) { pm.collectionVariables.set('user_refresh_token', json.refresh_token); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02 Create Queue (key-value)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/key-value/create",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "key-value",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"queue_name\": \"scenario-kv-catalog-{{$timestamp}}\",\n  \"config\": {\n    \"primary_key\": \"id\",\n    \"sort_key\": [\n      \"id\"\n    ],\n    \"max_queue_depth\": 10000,\n    \"max_message_age_seconds\": 60\n  },\n  \"description\": \"key-value scenario queue\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200/201\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "pm.test(\"Response has queue_id\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"queue_id\");",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "var json = pm.response.json();",
+                  "if (json.queue_id) { pm.collectionVariables.set('queue_id', json.queue_id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get queue settings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/list",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "list"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"Response has queues\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"queues\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03 Create Client \u2014 Producer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/clients",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "clients"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client_name\": \"kv-producer-{{$timestamp}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200/201\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "pm.test(\"Response has client_id\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"client_id\");",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "var json = pm.response.json();",
+                  "if (json.client_id) { pm.collectionVariables.set('producer_id', json.client_id); }",
+                  "if (json.client_secret) { pm.collectionVariables.set('producer_secret', json.client_secret); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04 Grant Producer Permission",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/clients/{{producer_id}}/queue-permissions/{{queue_id}}",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "clients",
+                "{{producer_id}}",
+                "queue-permissions",
+                "{{queue_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"can_publish\": true,\n  \"can_consume\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200/204\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 204]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "05 Login \u2014 Producer Client",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/clients/auth",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "clients",
+                "auth"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client_id\": \"{{producer_id}}\",\n  \"client_secret\": \"{{producer_secret}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"Response has access_token\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"access_token\");",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('producer_token', json.access_token);",
+                  "if (pm.response.json().refresh_token) { pm.collectionVariables.set('client_refresh_token', pm.response.json().refresh_token); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "06 Create Client \u2014 Reader",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/clients",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "clients"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client_name\": \"kv-reader-{{$timestamp}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200/201\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "pm.test(\"Response has client_id\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"client_id\");",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "var json = pm.response.json();",
+                  "if (json.client_id) { pm.collectionVariables.set('reader_id', json.client_id); }",
+                  "if (json.client_secret) { pm.collectionVariables.set('reader_secret', json.client_secret); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "07 Grant Reader Permission",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/clients/{{reader_id}}/queue-permissions/{{queue_id}}",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "clients",
+                "{{reader_id}}",
+                "queue-permissions",
+                "{{queue_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"can_publish\": false,\n  \"can_consume\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200/204\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 204]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "08 Login \u2014 Reader Client",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/clients/auth",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "clients",
+                "auth"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client_id\": \"{{reader_id}}\",\n  \"client_secret\": \"{{reader_secret}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"Response has access_token\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"access_token\");",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('reader_token', json.access_token);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "09 Permissions",
+      "item": [
+        {
+          "name": "09.01 Reader cannot publish (denied)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{reader_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/publish",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "publish"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payload\": {\n    \"id\": \"DENY\",\n    \"name\": \"x\",\n    \"amount\": 10\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 401/403\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([401, 403]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "10 Publish & Read Items",
+      "item": [
+        {
+          "name": "10.01 Publish K1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{producer_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/publish",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "publish"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payload\": {\n    \"id\": \"K1\",\n    \"name\": \"Alice\",\n    \"amount\": 10\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"status == ok\", function () {",
+                  "    pm.expect(pm.response.json().status).to.eql(\"ok\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "10.02 Publish K2",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{producer_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/publish",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "publish"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payload\": {\n    \"id\": \"K2\",\n    \"name\": \"Bob\",\n    \"amount\": 10\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"status == ok\", function () {",
+                  "    pm.expect(pm.response.json().status).to.eql(\"ok\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "10.03 List Items",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{reader_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/items",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "items"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"Response has items\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"items\");",
+                  "});",
+                  "pm.test(\"items has more than 0\", function () {",
+                  "    pm.expect(pm.response.json().items.length).to.be.at.least(1);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "10.04 Get Items by Key",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{reader_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/items/by_key",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "items",
+                "by_key"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"primary_key_values\": [\n    \"K1\",\n    \"K2\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"Response has items\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"items\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "10.05 Get Item Updates",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{reader_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/items/updates",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "items",
+                "updates"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"Response has items\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"items\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "11 Duplicate Key (reject)",
+      "item": [
+        {
+          "name": "11.01 Publish K1 again \u2014 rejected (409 duplicate)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{producer_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/publish",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "publish"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payload\": {\n    \"id\": \"K1\",\n    \"name\": \"Alice-v2\",\n    \"amount\": 99\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 409\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([409]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "11.02 Get K1 still present",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{reader_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/items/by_key",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "items",
+                "by_key"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"primary_key_values\": [\n    \"K1\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"Response has items\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"items\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "12 Bulk Publish Formats",
+      "item": [
+        {
+          "name": "12.01 Publish Batch",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{producer_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/publish",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "publish"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"messages\": [\n    {\n      \"payload\": {\n        \"id\": \"B1\",\n        \"name\": \"Eve\"\n      }\n    },\n    {\n      \"payload\": {\n        \"id\": \"B2\",\n        \"name\": \"Frank\"\n      }\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200/201/202/204\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201, 202, 204]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "12.02 Publish CSV",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/csv"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{producer_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/publish",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "publish"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "id,name,amount\nC1,Carol,5\nC2,Dave,7",
+              "options": {
+                "raw": {
+                  "language": "text"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200/201/202/204\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201, 202, 204]);",
+                  "});",
+                  "pm.test(\"published == 2\", function () {",
+                  "    pm.expect(pm.response.json().published).to.eql(2);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "12.03 Publish XML",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/xml"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{producer_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/publish",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "publish"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "<items>\n  <item><id>X1</id><name>Grace</name><amount>3</amount></item>\n  <item><id>X2</id><name>Heidi</name><amount>4</amount></item>\n</items>",
+              "options": {
+                "raw": {
+                  "language": "text"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200/201/202/204\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201, 202, 204]);",
+                  "});",
+                  "pm.test(\"published == 2\", function () {",
+                  "    pm.expect(pm.response.json().published).to.eql(2);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "13 Monitoring & Admin",
+      "item": [
+        {
+          "name": "13.01 Queue Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/stats",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "stats"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"Response has published\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"published\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "13.02 Update Queue Config",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/config",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "config"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"max_queue_depth\": 5000,\n  \"max_message_age_seconds\": 60\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200/204\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 204]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get queue settings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/list",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "list"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"Response has queues\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"queues\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "13.03 Rename Queue & Edit Description",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/config",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "config"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"config\": {},\n  \"queue_name\": \"renamed-{{queue_id}}\",\n  \"description\": \"Description edited by scenario\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200/204\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 204]);",
+                  "});",
+                  "pm.test(\"Response has queue_name\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"queue_name\");",
+                  "});",
+                  "pm.test(\"description == Description edited by scenario\", function () {",
+                  "    pm.expect(pm.response.json().description).to.eql(\"Description edited by scenario\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get queue settings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/list",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "list"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"Response has queues\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"queues\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "14 Queue Removal Guard (force required)",
+      "item": [
+        {
+          "name": "14.01 Remove WITHOUT force \u2014 blocked (queue has pending messages)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/remove",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "remove"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"force\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 409\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([409]);",
+                  "});",
+                  "pm.test(\"Response has detail\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"detail\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "15 Delete by key",
+      "item": [
+        {
+          "name": "15.01 Publish item DEL1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{producer_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/publish",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "publish"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payload\": {\n    \"id\": \"DEL1\",\n    \"name\": \"Zoe\",\n    \"amount\": 1\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200/201\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "15.02 DEL1 present before delete",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{reader_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/items/by_key",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "items",
+                "by_key"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"primary_key_values\": [\n    \"DEL1\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"items has more than 0\", function () {",
+                  "    pm.expect(pm.response.json().items.length).to.be.at.least(1);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "15.03 Reader cannot delete (no publish perm) -> 403",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{reader_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/items",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "items"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"primary_key_values\": [\n    \"DEL1\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 401/403\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([401, 403]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "15.04 Delete DEL1 by key (publisher)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{producer_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/items",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "items"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"primary_key_values\": [\n    \"DEL1\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"deleted_count == 1\", function () {",
+                  "    pm.expect(pm.response.json().deleted_count).to.eql(1);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "15.05 DEL1 gone after delete",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{reader_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/items/by_key",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "items",
+                "by_key"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"primary_key_values\": [\n    \"DEL1\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"items == []\", function () {",
+                  "    pm.expect(pm.response.json().items).to.eql([]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "16 Filtered consume rejected (wrong type)",
+      "item": [
+        {
+          "name": "16.01 Filtered consume on key-value -> 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{reader_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/consume",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "consume"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"filters\": {\n    \"id\": \"K1\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([400]);",
+                  "});",
+                  "pm.test(\"names supported types\", function () {",
+                  "    pm.expect(JSON.stringify(pm.response.json())).to.match(/one-to-one/i);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "17 On-duplicate = replace (config)",
+      "item": [
+        {
+          "name": "17.01 Create KV queue (on_duplicate=replace)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/key-value/create",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "key-value",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"queue_name\": \"kvodr-{{$timestamp}}\",\n  \"config\": {\n    \"primary_key\": \"id\",\n    \"on_duplicate\": \"replace\"\n  },\n  \"description\": \"odr\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200/201\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "pm.test(\"Response has queue_id\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"queue_id\");",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "var json = pm.response.json();",
+                  "if (json.queue_id) { pm.collectionVariables.set('odr_queue_id', json.queue_id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "17.02 Create client",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/clients",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "clients"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client_name\": \"kvodr-{{$timestamp}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200/201\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "pm.test(\"Response has client_id\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"client_id\");",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "var json = pm.response.json();",
+                  "if (json.client_id) { pm.collectionVariables.set('odr_id', json.client_id); }",
+                  "if (json.client_secret) { pm.collectionVariables.set('odr_secret', json.client_secret); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "17.03 Grant publish+consume",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/clients/{{odr_id}}/queue-permissions/{{odr_queue_id}}",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "clients",
+                "{{odr_id}}",
+                "queue-permissions",
+                "{{odr_queue_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"can_publish\": true,\n  \"can_consume\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200/204\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 204]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "17.04 Login client",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/clients/auth",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "clients",
+                "auth"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client_id\": \"{{odr_id}}\",\n  \"client_secret\": \"{{odr_secret}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"Response has access_token\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"access_token\");",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('odr_token', json.access_token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "17.05 Publish item (v1)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{odr_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{odr_queue_id}}/publish",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{odr_queue_id}}",
+                "publish"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payload\": {\n    \"id\": \"R1\",\n    \"v\": \"first\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200/201\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "17.06 Publish same key (v2) -> replaced, not 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{odr_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{odr_queue_id}}/publish",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{odr_queue_id}}",
+                "publish"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payload\": {\n    \"id\": \"R1\",\n    \"v\": \"second\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200/201\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "17.07 Get by key -> latest value",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{odr_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{odr_queue_id}}/items/by_key",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{odr_queue_id}}",
+                "items",
+                "by_key"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"primary_key_values\": [\n    \"R1\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"value was replaced\", function () {",
+                  "    pm.expect(JSON.stringify(pm.response.json())).to.match(/second/);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Token Refresh",
+      "item": [
+        {
+          "name": "Refresh User Access Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/auth/refresh",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "auth",
+                "refresh"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{user_refresh_token}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"Response has access_token\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"access_token\");",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "var json = pm.response.json();",
+                  "if (json.access_token) { pm.collectionVariables.set('user_token_refreshed', json.access_token); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verify Refreshed User Token (session)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token_refreshed}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/auth/session",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "auth",
+                "session"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"Response has user_id\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"user_id\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Refresh Client Access Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/clients/auth/refresh",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "clients",
+                "auth",
+                "refresh"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{client_refresh_token}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"Response has access_token\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"access_token\");",
+                  "});",
+                  "pm.test(\"Response has refresh_token\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"refresh_token\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "tenant_exp_url",
+      "value": ""
+    },
+    {
+      "key": "user_email",
+      "value": ""
+    },
+    {
+      "key": "user_password",
+      "value": ""
+    },
+    {
+      "key": "queue_id",
+      "value": ""
+    }
+  ]
+}

@@ -1,0 +1,494 @@
+{
+  "info": {
+    "name": "Tenant EXP \u2014 time-series retention (slow)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Setup",
+      "item": [
+        {
+          "name": "Login \u2014 Tenant User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/auth/login",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{user_email}}\",\n  \"password\": \"{{user_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"Response has access_token\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"access_token\");",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "var json = pm.response.json();",
+                  "pm.environment.set('user_token', json.access_token);",
+                  "if (json.refresh_token) { pm.collectionVariables.set('user_refresh_token', json.refresh_token); }"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Time-series retention (bucket eviction)",
+      "item": [
+        {
+          "name": "Create TS queue (1s retention)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/time-series/create",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "time-series",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"queue_name\": \"tsr-{{$timestamp}}\",\n  \"config\": {\n    \"aggregation_fields\": [\n      \"value\"\n    ],\n    \"aggregation_interval_minutes\": 1,\n    \"timezone\": \"UTC\",\n    \"max_message_age_seconds\": 1\n  },\n  \"description\": \"ts retention\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200/201\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "pm.test(\"Response has queue_id\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"queue_id\");",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "var json = pm.response.json();",
+                  "if (json.queue_id) { pm.collectionVariables.set('tsr_queue_id', json.queue_id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create client",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/clients",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "clients"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client_name\": \"tsr-{{$timestamp}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200/201\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "pm.test(\"Response has client_id\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"client_id\");",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "var json = pm.response.json();",
+                  "if (json.client_id) { pm.collectionVariables.set('tsr_id', json.client_id); }",
+                  "if (json.client_secret) { pm.collectionVariables.set('tsr_secret', json.client_secret); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Grant publish+consume",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/clients/{{tsr_id}}/queue-permissions/{{tsr_queue_id}}",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "clients",
+                "{{tsr_id}}",
+                "queue-permissions",
+                "{{tsr_queue_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"can_publish\": true,\n  \"can_consume\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200/204\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 204]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login client",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/clients/auth",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "clients",
+                "auth"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client_id\": \"{{tsr_id}}\",\n  \"client_secret\": \"{{tsr_secret}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"Response has access_token\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"access_token\");",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('tsr_token', json.access_token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Publish a point",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tsr_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{tsr_queue_id}}/publish",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{tsr_queue_id}}",
+                "publish"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payload\": {\n    \"value\": 42\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"status == aggregated\", function () {",
+                  "    pm.expect(pm.response.json().status).to.eql(\"aggregated\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Buckets present before retention",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tsr_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{tsr_queue_id}}/buckets/latest?count=10&fill_gaps=false",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{tsr_queue_id}}",
+                "buckets",
+                "latest"
+              ],
+              "query": [
+                {
+                  "key": "count",
+                  "value": "10"
+                },
+                {
+                  "key": "fill_gaps",
+                  "value": "false"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"buckets has more than 0\", function () {",
+                  "    pm.expect(pm.response.json().buckets.length).to.be.at.least(1);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Buckets evicted after retention",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tsr_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{tsr_queue_id}}/buckets/latest?count=10&fill_gaps=false",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{tsr_queue_id}}",
+                "buckets",
+                "latest"
+              ],
+              "query": [
+                {
+                  "key": "count",
+                  "value": "10"
+                },
+                {
+                  "key": "fill_gaps",
+                  "value": "false"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var _s = Date.now();",
+                  "while (Date.now() - _s < 70000) {}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"count == 0\", function () {",
+                  "    pm.expect(pm.response.json().count).to.eql(0);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "tenant_exp_url",
+      "value": ""
+    },
+    {
+      "key": "user_email",
+      "value": ""
+    },
+    {
+      "key": "user_password",
+      "value": ""
+    },
+    {
+      "key": "queue_id",
+      "value": ""
+    }
+  ]
+}

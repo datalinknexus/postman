@@ -1,0 +1,313 @@
+{
+  "info": {
+    "name": "Tenant EXP \u2014 storage quota caps (standalone, wipe after)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Setup",
+      "item": [
+        {
+          "name": "Login \u2014 Tenant User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/auth/login",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{user_email}}\",\n  \"password\": \"{{user_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"Response has access_token\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"access_token\");",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "var json = pm.response.json();",
+                  "pm.environment.set('user_token', json.access_token);",
+                  "if (json.refresh_token) { pm.collectionVariables.set('user_refresh_token', json.refresh_token); }"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Queue count cap",
+      "item": [
+        {
+          "name": "Fill queues to cap (loop)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/one-to-one/create",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "one-to-one",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"queue_name\": \"qcap-{{$timestamp}}\",\n  \"config\": {\n    \"max_queue_depth\": 10000,\n    \"max_message_age_seconds\": 3600\n  },\n  \"description\": \"quota cap probe\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var _n = parseInt(pm.environment.get('qfill') || '0');",
+                  "if (_n > 250) { postman.setNextRequest('Queue create at cap is refused (507)'); }",
+                  "else if (pm.response.code === 200) { postman.setNextRequest('Fill queues to cap (loop)'); }",
+                  "else { postman.setNextRequest('Queue create at cap is refused (507)'); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Queue create at cap is refused (507)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/one-to-one/create",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "one-to-one",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"queue_name\": \"qcap-final-{{$timestamp}}\",\n  \"config\": {\n    \"max_queue_depth\": 10000,\n    \"max_message_age_seconds\": 3600\n  },\n  \"description\": \"over cap\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 507\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([507]);",
+                  "});",
+                  "pm.test(\"mentions queue quota\", function () {",
+                  "    pm.expect(JSON.stringify(pm.response.json())).to.include(\"Queue quota\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Client count cap",
+      "item": [
+        {
+          "name": "Fill clients to cap (loop)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/clients",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "clients"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client_name\": \"ccap-{{$timestamp}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var _n = parseInt(pm.environment.get('cfill') || '0');",
+                  "if (_n > 250) { postman.setNextRequest('Client create at cap is refused (507)'); }",
+                  "else if (pm.response.code === 200) { postman.setNextRequest('Fill clients to cap (loop)'); }",
+                  "else { postman.setNextRequest('Client create at cap is refused (507)'); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Client create at cap is refused (507)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/clients",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "clients"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client_name\": \"ccap-final-{{$timestamp}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 507\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([507]);",
+                  "});",
+                  "pm.test(\"mentions client quota\", function () {",
+                  "    pm.expect(JSON.stringify(pm.response.json())).to.include(\"Client quota\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "tenant_exp_url",
+      "value": ""
+    },
+    {
+      "key": "user_email",
+      "value": ""
+    },
+    {
+      "key": "user_password",
+      "value": ""
+    },
+    {
+      "key": "queue_id",
+      "value": ""
+    }
+  ]
+}

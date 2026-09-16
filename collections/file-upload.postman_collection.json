@@ -1,0 +1,4196 @@
+{
+  "info": {
+    "name": "Tenant EXP \u2014 file upload",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Setup",
+      "item": [
+        {
+          "name": "Login \u2014 Tenant User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/auth/login",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{user_email}}\",\n  \"password\": \"{{user_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"Response has access_token\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"access_token\");",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "var json = pm.response.json();",
+                  "pm.environment.set('user_token', json.access_token);",
+                  "if (json.refresh_token) { pm.collectionVariables.set('user_refresh_token', json.refresh_token); }"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "CSV file upload",
+      "item": [
+        {
+          "name": "Create CSV queue",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/one-to-one/create",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "one-to-one",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"queue_name\": \"fileupload-one-to-one-{{$timestamp}}\",\n  \"config\": {},\n  \"description\": \"CSV file upload\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200/201\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "pm.test(\"Response has queue_id\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"queue_id\");",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "var json = pm.response.json();",
+                  "if (json.queue_id) { pm.collectionVariables.set('queue_id', json.queue_id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get queue settings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/list",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "list"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"Response has queues\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"queues\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create client",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/clients",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "clients"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client_name\": \"fileupload-one-to-one-{{$timestamp}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200/201\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "pm.test(\"Response has client_id\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"client_id\");",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "var json = pm.response.json();",
+                  "if (json.client_id) { pm.collectionVariables.set('producer_id', json.client_id); }",
+                  "if (json.client_secret) { pm.collectionVariables.set('producer_secret', json.client_secret); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Grant permissions (publish + consume)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/clients/{{producer_id}}/queue-permissions/{{queue_id}}",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "clients",
+                "{{producer_id}}",
+                "queue-permissions",
+                "{{queue_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"can_publish\": true,\n  \"can_consume\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200/204\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 204]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login client",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/clients/auth",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "clients",
+                "auth"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client_id\": \"{{producer_id}}\",\n  \"client_secret\": \"{{producer_secret}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"Response has access_token\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"access_token\");",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('producer_token', json.access_token);",
+                  "if (pm.response.json().refresh_token) { pm.collectionVariables.set('client_refresh_token', pm.response.json().refresh_token); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Upload CSV file (3 rows)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/csv"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{producer_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/publish/file",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "publish",
+                "file"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "name,amount\nAlice,10\nBob,20\nCarol,30",
+              "options": {
+                "raw": {
+                  "language": "text"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"published == 3\", function () {",
+                  "    pm.expect(pm.response.json().published).to.eql(3);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consume record 1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{producer_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/consume",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "consume"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "pm.collectionVariables.set(\"up_msg\", pm.response.headers.get(\"X-Message-Id\"));",
+                  "pm.collectionVariables.set(\"up_lease\", pm.response.headers.get(\"X-Lease-Id\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ack record 1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{producer_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/ack",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "ack"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message_id\": \"{{up_msg}}\",\n  \"lease_id\": \"{{up_lease}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consume record 2",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{producer_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/consume",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "consume"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "pm.collectionVariables.set(\"up_msg\", pm.response.headers.get(\"X-Message-Id\"));",
+                  "pm.collectionVariables.set(\"up_lease\", pm.response.headers.get(\"X-Lease-Id\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ack record 2",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{producer_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/ack",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "ack"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message_id\": \"{{up_msg}}\",\n  \"lease_id\": \"{{up_lease}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consume record 3",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{producer_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/consume",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "consume"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "pm.collectionVariables.set(\"up_msg\", pm.response.headers.get(\"X-Message-Id\"));",
+                  "pm.collectionVariables.set(\"up_lease\", pm.response.headers.get(\"X-Lease-Id\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ack record 3",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{producer_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/ack",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "ack"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message_id\": \"{{up_msg}}\",\n  \"lease_id\": \"{{up_lease}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "XML file upload",
+      "item": [
+        {
+          "name": "Create XML queue",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/one-to-one/create",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "one-to-one",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"queue_name\": \"fileupload-one-to-one-{{$timestamp}}\",\n  \"config\": {},\n  \"description\": \"XML file upload\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200/201\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "pm.test(\"Response has queue_id\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"queue_id\");",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "var json = pm.response.json();",
+                  "if (json.queue_id) { pm.collectionVariables.set('queue_id', json.queue_id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get queue settings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/list",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "list"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"Response has queues\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"queues\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create client",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/clients",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "clients"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client_name\": \"fileupload-one-to-one-{{$timestamp}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200/201\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "pm.test(\"Response has client_id\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"client_id\");",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "var json = pm.response.json();",
+                  "if (json.client_id) { pm.collectionVariables.set('producer_id', json.client_id); }",
+                  "if (json.client_secret) { pm.collectionVariables.set('producer_secret', json.client_secret); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Grant permissions (publish + consume)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/clients/{{producer_id}}/queue-permissions/{{queue_id}}",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "clients",
+                "{{producer_id}}",
+                "queue-permissions",
+                "{{queue_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"can_publish\": true,\n  \"can_consume\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200/204\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 204]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login client",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/clients/auth",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "clients",
+                "auth"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client_id\": \"{{producer_id}}\",\n  \"client_secret\": \"{{producer_secret}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"Response has access_token\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"access_token\");",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('producer_token', json.access_token);",
+                  "if (pm.response.json().refresh_token) { pm.collectionVariables.set('client_refresh_token', pm.response.json().refresh_token); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Upload XML file (3 elements)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/xml"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{producer_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/publish/file",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "publish",
+                "file"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "<rows><r><sku>ABC</sku><qty>1</qty></r><r><sku>DEF</sku><qty>2</qty></r><r><sku>GHI</sku><qty>3</qty></r></rows>",
+              "options": {
+                "raw": {
+                  "language": "text"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"published == 3\", function () {",
+                  "    pm.expect(pm.response.json().published).to.eql(3);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consume record 1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{producer_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/consume",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "consume"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "pm.collectionVariables.set(\"up_msg\", pm.response.headers.get(\"X-Message-Id\"));",
+                  "pm.collectionVariables.set(\"up_lease\", pm.response.headers.get(\"X-Lease-Id\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ack record 1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{producer_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/ack",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "ack"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message_id\": \"{{up_msg}}\",\n  \"lease_id\": \"{{up_lease}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consume record 2",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{producer_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/consume",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "consume"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "pm.collectionVariables.set(\"up_msg\", pm.response.headers.get(\"X-Message-Id\"));",
+                  "pm.collectionVariables.set(\"up_lease\", pm.response.headers.get(\"X-Lease-Id\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ack record 2",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{producer_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/ack",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "ack"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message_id\": \"{{up_msg}}\",\n  \"lease_id\": \"{{up_lease}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consume record 3",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{producer_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/consume",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "consume"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "pm.collectionVariables.set(\"up_msg\", pm.response.headers.get(\"X-Message-Id\"));",
+                  "pm.collectionVariables.set(\"up_lease\", pm.response.headers.get(\"X-Lease-Id\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ack record 3",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{producer_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/ack",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "ack"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message_id\": \"{{up_msg}}\",\n  \"lease_id\": \"{{up_lease}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "JSON file upload",
+      "item": [
+        {
+          "name": "Create JSON queue",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/one-to-one/create",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "one-to-one",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"queue_name\": \"fileupload-one-to-one-{{$timestamp}}\",\n  \"config\": {},\n  \"description\": \"JSON file upload\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200/201\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "pm.test(\"Response has queue_id\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"queue_id\");",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "var json = pm.response.json();",
+                  "if (json.queue_id) { pm.collectionVariables.set('queue_id', json.queue_id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get queue settings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/list",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "list"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"Response has queues\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"queues\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create client",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/clients",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "clients"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client_name\": \"fileupload-one-to-one-{{$timestamp}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200/201\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "pm.test(\"Response has client_id\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"client_id\");",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "var json = pm.response.json();",
+                  "if (json.client_id) { pm.collectionVariables.set('producer_id', json.client_id); }",
+                  "if (json.client_secret) { pm.collectionVariables.set('producer_secret', json.client_secret); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Grant permissions (publish + consume)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/clients/{{producer_id}}/queue-permissions/{{queue_id}}",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "clients",
+                "{{producer_id}}",
+                "queue-permissions",
+                "{{queue_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"can_publish\": true,\n  \"can_consume\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200/204\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 204]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login client",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/clients/auth",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "clients",
+                "auth"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client_id\": \"{{producer_id}}\",\n  \"client_secret\": \"{{producer_secret}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"Response has access_token\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"access_token\");",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('producer_token', json.access_token);",
+                  "if (pm.response.json().refresh_token) { pm.collectionVariables.set('client_refresh_token', pm.response.json().refresh_token); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Upload JSON file (3 objects)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{producer_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/publish/file",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "publish",
+                "file"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "[{\"order_id\":\"J1\",\"amt\":1},{\"order_id\":\"J2\",\"amt\":2},{\"order_id\":\"J3\",\"amt\":3}]",
+              "options": {
+                "raw": {
+                  "language": "text"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"published == 3\", function () {",
+                  "    pm.expect(pm.response.json().published).to.eql(3);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consume record 1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{producer_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/consume",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "consume"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "pm.collectionVariables.set(\"up_msg\", pm.response.headers.get(\"X-Message-Id\"));",
+                  "pm.collectionVariables.set(\"up_lease\", pm.response.headers.get(\"X-Lease-Id\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ack record 1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{producer_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/ack",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "ack"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message_id\": \"{{up_msg}}\",\n  \"lease_id\": \"{{up_lease}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consume record 2",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{producer_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/consume",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "consume"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "pm.collectionVariables.set(\"up_msg\", pm.response.headers.get(\"X-Message-Id\"));",
+                  "pm.collectionVariables.set(\"up_lease\", pm.response.headers.get(\"X-Lease-Id\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ack record 2",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{producer_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/ack",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "ack"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message_id\": \"{{up_msg}}\",\n  \"lease_id\": \"{{up_lease}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consume record 3",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{producer_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/consume",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "consume"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "pm.collectionVariables.set(\"up_msg\", pm.response.headers.get(\"X-Message-Id\"));",
+                  "pm.collectionVariables.set(\"up_lease\", pm.response.headers.get(\"X-Lease-Id\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ack record 3",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{producer_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/ack",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "ack"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message_id\": \"{{up_msg}}\",\n  \"lease_id\": \"{{up_lease}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "File Upload \u2014 validation guards",
+      "item": [
+        {
+          "name": "Create validation queue",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/one-to-one/create",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "one-to-one",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"queue_name\": \"fileupload-one-to-one-{{$timestamp}}\",\n  \"config\": {},\n  \"description\": \"validation file-upload\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200/201\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "pm.test(\"Response has queue_id\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"queue_id\");",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "var json = pm.response.json();",
+                  "if (json.queue_id) { pm.collectionVariables.set('queue_id', json.queue_id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get queue settings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/list",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "list"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"Response has queues\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"queues\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create client",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/clients",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "clients"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client_name\": \"fileupload-one-to-one-{{$timestamp}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200/201\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "pm.test(\"Response has client_id\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"client_id\");",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "var json = pm.response.json();",
+                  "if (json.client_id) { pm.collectionVariables.set('producer_id', json.client_id); }",
+                  "if (json.client_secret) { pm.collectionVariables.set('producer_secret', json.client_secret); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Grant permissions (publish + consume)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/clients/{{producer_id}}/queue-permissions/{{queue_id}}",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "clients",
+                "{{producer_id}}",
+                "queue-permissions",
+                "{{queue_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"can_publish\": true,\n  \"can_consume\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200/204\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 204]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login client",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/clients/auth",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "clients",
+                "auth"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client_id\": \"{{producer_id}}\",\n  \"client_secret\": \"{{producer_secret}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"Response has access_token\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"access_token\");",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('producer_token', json.access_token);",
+                  "if (pm.response.json().refresh_token) { pm.collectionVariables.set('client_refresh_token', pm.response.json().refresh_token); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Unsupported Content-Type -> 415",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/octet-stream"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{producer_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/publish/file",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "publish",
+                "file"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "rawbytes",
+              "options": {
+                "raw": {
+                  "language": "text"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 415\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([415]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Empty file -> 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/csv"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{producer_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/publish/file",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "publish",
+                "file"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "text"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([400]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Malformed XML -> 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/xml"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{producer_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/publish/file",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "publish",
+                "file"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "<rows><r><id>1</id></rows>",
+              "options": {
+                "raw": {
+                  "language": "text"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([400]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Invalid JSON -> 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{producer_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/publish/file",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "publish",
+                "file"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{not valid json",
+              "options": {
+                "raw": {
+                  "language": "text"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([400]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "JSON scalar (not an object) -> 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{producer_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/publish/file",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "publish",
+                "file"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "\"just a string\"",
+              "options": {
+                "raw": {
+                  "language": "text"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([400]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "JSON array of scalars -> 400 (whole file)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{producer_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/publish/file",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "publish",
+                "file"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "[1, 2, 3]",
+              "options": {
+                "raw": {
+                  "language": "text"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([400]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "JSON array w/ one bad row -> 400 (nothing published)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{producer_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/publish/file",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "publish",
+                "file"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "[{\"order_id\":\"OK1\"},\"bad\",{\"order_id\":\"OK2\"}]",
+              "options": {
+                "raw": {
+                  "language": "text"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([400]);",
+                  "});",
+                  "pm.test(\"nothing published\", function () {",
+                  "    pm.expect(JSON.stringify(pm.response.json())).to.match(/nothing/i);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CSV wrong-column-count row -> 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/csv"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{producer_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/publish/file",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "publish",
+                "file"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "a,b,c\n1,2,3\n4,5,6\nX,Y,Z,EXTRA",
+              "options": {
+                "raw": {
+                  "language": "text"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([400]);",
+                  "});",
+                  "pm.test(\"names the bad row\", function () {",
+                  "    pm.expect(JSON.stringify(pm.response.json())).to.match(/columns/i);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "JSON content sent as text/csv -> 400 w/ hint",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/csv"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{producer_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/publish/file",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "publish",
+                "file"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"a\": 1,\n  \"b\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "text"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([400]);",
+                  "});",
+                  "pm.test(\"hints at mismatch\", function () {",
+                  "    pm.expect(JSON.stringify(pm.response.json())).to.match(/looks like JSON/i);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Primary key required \u2014 file upload & batch all-or-nothing",
+      "item": [
+        {
+          "name": "Create queue (primary_key = id)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/one-to-one/create",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "one-to-one",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"queue_name\": \"fileupload-pk-{{$timestamp}}\",\n  \"config\": {\n    \"primary_key\": \"id\"\n  },\n  \"description\": \"primary key required\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200/201\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "pm.test(\"Response has queue_id\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"queue_id\");",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "var json = pm.response.json();",
+                  "if (json.queue_id) { pm.collectionVariables.set('queue_id', json.queue_id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get queue settings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/list",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "list"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"Response has queues\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"queues\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create client",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/clients",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "clients"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client_name\": \"fileupload-one-to-one-{{$timestamp}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200/201\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "pm.test(\"Response has client_id\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"client_id\");",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "var json = pm.response.json();",
+                  "if (json.client_id) { pm.collectionVariables.set('producer_id', json.client_id); }",
+                  "if (json.client_secret) { pm.collectionVariables.set('producer_secret', json.client_secret); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Grant permissions (publish + consume)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/clients/{{producer_id}}/queue-permissions/{{queue_id}}",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "clients",
+                "{{producer_id}}",
+                "queue-permissions",
+                "{{queue_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"can_publish\": true,\n  \"can_consume\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200/204\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 204]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login client",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/clients/auth",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "clients",
+                "auth"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client_id\": \"{{producer_id}}\",\n  \"client_secret\": \"{{producer_secret}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"Response has access_token\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"access_token\");",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('producer_token', json.access_token);",
+                  "if (pm.response.json().refresh_token) { pm.collectionVariables.set('client_refresh_token', pm.response.json().refresh_token); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Upload JSON file missing primary key -> 400 (nothing published)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{producer_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/publish/file",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "publish",
+                "file"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\"id\": \"J1\", \"v\": 1},\n  {\"v\": 2},\n  {\"id\": \"J3\", \"v\": 3}\n]",
+              "options": {
+                "raw": {
+                  "language": "text"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([400]);",
+                  "});",
+                  "pm.test(\"detail includes primary_key\", function () {",
+                  "    pm.expect(pm.response.json().detail).to.include(\"primary_key\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Upload CSV file missing primary-key column -> 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/csv"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{producer_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/publish/file",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "publish",
+                "file"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "name,amount\nAlice,10\nBob,20",
+              "options": {
+                "raw": {
+                  "language": "text"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([400]);",
+                  "});",
+                  "pm.test(\"detail includes primary_key\", function () {",
+                  "    pm.expect(pm.response.json().detail).to.include(\"primary_key\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Upload XML file with an element missing primary key -> 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/xml"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{producer_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/publish/file",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "publish",
+                "file"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "<records>\n  <record><id>X1</id><v>1</v></record>\n  <record><v>2</v></record>\n</records>",
+              "options": {
+                "raw": {
+                  "language": "text"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([400]);",
+                  "});",
+                  "pm.test(\"detail includes primary_key\", function () {",
+                  "    pm.expect(pm.response.json().detail).to.include(\"primary_key\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consume -> 204 confirms the rejected files published nothing",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{producer_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/consume",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "consume"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 204\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([204]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Upload valid file (every record has primary key) -> 200",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{producer_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/publish/file",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "publish",
+                "file"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\"id\": \"J1\", \"v\": 1},\n  {\"id\": \"J2\", \"v\": 2}\n]",
+              "options": {
+                "raw": {
+                  "language": "text"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"published == 2\", function () {",
+                  "    pm.expect(pm.response.json().published).to.eql(2);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Batch publish (X-Batch-Mode: all-or-nothing), 1 record missing primary key -> 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Batch-Mode",
+                "value": "all-or-nothing"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{producer_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/publish",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "publish"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\"id\": \"AON1\"},\n  {\"note\": \"no id\"}\n]",
+              "options": {
+                "raw": {
+                  "language": "text"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([400]);",
+                  "});",
+                  "pm.test(\"detail includes primary_key\", function () {",
+                  "    pm.expect(pm.response.json().detail).to.include(\"primary_key\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Batch publish (X-Batch-Mode: best-effort), 1 record missing primary key -> 200 partial",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Batch-Mode",
+                "value": "best-effort"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{producer_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/publish",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "publish"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\"id\": \"BE1\"},\n  {\"note\": \"no id\"}\n]",
+              "options": {
+                "raw": {
+                  "language": "text"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"published == 1\", function () {",
+                  "    pm.expect(pm.response.json().published).to.eql(1);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Invalid X-Batch-Mode -> 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Batch-Mode",
+                "value": "bogus"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{producer_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/publish",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "publish"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\"id\": \"Z1\"}\n]",
+              "options": {
+                "raw": {
+                  "language": "text"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([400]);",
+                  "});",
+                  "pm.test(\"detail includes X-Batch-Mode\", function () {",
+                  "    pm.expect(pm.response.json().detail).to.include(\"X-Batch-Mode\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Size limits (10 KB per record, 1 MB per file)",
+      "item": [
+        {
+          "name": "Create size-limit queue",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/one-to-one/create",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "one-to-one",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"queue_name\": \"fileupload-one-to-one-{{$timestamp}}\",\n  \"config\": {},\n  \"description\": \"file size limit\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200/201\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "pm.test(\"Response has queue_id\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"queue_id\");",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "var json = pm.response.json();",
+                  "if (json.queue_id) { pm.collectionVariables.set('queue_id', json.queue_id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get queue settings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/list",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "list"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"Response has queues\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"queues\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create client",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/clients",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "clients"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client_name\": \"fileupload-one-to-one-{{$timestamp}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200/201\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "pm.test(\"Response has client_id\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"client_id\");",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "var json = pm.response.json();",
+                  "if (json.client_id) { pm.collectionVariables.set('producer_id', json.client_id); }",
+                  "if (json.client_secret) { pm.collectionVariables.set('producer_secret', json.client_secret); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Grant permissions (publish + consume)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/clients/{{producer_id}}/queue-permissions/{{queue_id}}",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "clients",
+                "{{producer_id}}",
+                "queue-permissions",
+                "{{queue_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"can_publish\": true,\n  \"can_consume\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200/204\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 204]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login client",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/clients/auth",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "clients",
+                "auth"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client_id\": \"{{producer_id}}\",\n  \"client_secret\": \"{{producer_secret}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"Response has access_token\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"access_token\");",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('producer_token', json.access_token);",
+                  "if (pm.response.json().refresh_token) { pm.collectionVariables.set('client_refresh_token', pm.response.json().refresh_token); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Publish file, record just under 10 KB -> 200",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{producer_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/publish/file",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "publish",
+                "file"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "[{\"blob\":\"{{file_rec_under}}\"}]",
+              "options": {
+                "raw": {
+                  "language": "text"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('file_rec_under', 'x'.repeat(9929));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"status == ok\", function () {",
+                  "    pm.expect(pm.response.json().status).to.eql(\"ok\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Publish file, record just over 10 KB -> 413",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{producer_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/publish/file",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "publish",
+                "file"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "[{\"blob\":\"{{file_rec_over}}\"}]",
+              "options": {
+                "raw": {
+                  "language": "text"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('file_rec_over', 'x'.repeat(10529));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 413\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([413]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Publish file just over 1 MB -> 413",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{producer_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/publish/file",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "publish",
+                "file"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "[{\"blob\":\"{{file_over}}\"}]",
+              "options": {
+                "raw": {
+                  "language": "text"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('file_over', 'x'.repeat(1048763));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 413\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([413]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Token Refresh",
+      "item": [
+        {
+          "name": "Refresh User Access Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/auth/refresh",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "auth",
+                "refresh"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{user_refresh_token}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"Response has access_token\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"access_token\");",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "var json = pm.response.json();",
+                  "if (json.access_token) { pm.collectionVariables.set('user_token_refreshed', json.access_token); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verify Refreshed User Token (session)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token_refreshed}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/auth/session",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "auth",
+                "session"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"Response has user_id\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"user_id\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Refresh Client Access Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/clients/auth/refresh",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "clients",
+                "auth",
+                "refresh"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{client_refresh_token}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"Response has access_token\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"access_token\");",
+                  "});",
+                  "pm.test(\"Response has refresh_token\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"refresh_token\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "tenant_exp_url",
+      "value": ""
+    },
+    {
+      "key": "user_email",
+      "value": ""
+    },
+    {
+      "key": "user_password",
+      "value": ""
+    },
+    {
+      "key": "queue_id",
+      "value": ""
+    }
+  ]
+}

@@ -1,0 +1,2943 @@
+{
+  "info": {
+    "name": "Tenant EXP \u2014 masking & tokenization",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Setup",
+      "item": [
+        {
+          "name": "01 Login \u2014 Tenant User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/auth/login",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{user_email}}\",\n  \"password\": \"{{user_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"Response has access_token\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"access_token\");",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "var json = pm.response.json();",
+                  "pm.environment.set('user_token', json.access_token);",
+                  "if (json.refresh_token) { pm.collectionVariables.set('user_refresh_token', json.refresh_token); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02 Create Queue (one-to-one)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/one-to-one/create",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "one-to-one",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"queue_name\": \"scenario-masking-mask-{{$timestamp}}\",\n  \"config\": {\n    \"masking_rules\": [\n      {\n        \"pattern\": \"PAN\",\n        \"mode\": \"mask\"\n      },\n      {\n        \"pattern\": \"SSN\",\n        \"mode\": \"mask\"\n      },\n      {\n        \"pattern\": \"EMAIL\",\n        \"mode\": \"mask\"\n      },\n      {\n        \"pattern\": \"PHONE\",\n        \"mode\": \"mask\"\n      }\n    ],\n    \"max_queue_depth\": 1000,\n    \"max_message_age_seconds\": 3600\n  },\n  \"description\": \"one-to-one scenario queue\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200/201\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "pm.test(\"Response has queue_id\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"queue_id\");",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "var json = pm.response.json();",
+                  "if (json.queue_id) { pm.collectionVariables.set('queue_id', json.queue_id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get queue settings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/list",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "list"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"Response has queues\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"queues\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03 Create Queue (tokenizing)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/one-to-one/create",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "one-to-one",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"queue_name\": \"scenario-masking-tok-{{$timestamp}}\",\n  \"config\": {\n    \"masking_rules\": [\n      {\n        \"pattern\": \"PAN\",\n        \"mode\": \"tokenize\"\n      },\n      {\n        \"pattern\": \"EMAIL\",\n        \"mode\": \"tokenize\"\n      }\n    ],\n    \"max_queue_depth\": 1000,\n    \"max_message_age_seconds\": 3600\n  },\n  \"description\": \"tokenizing scenario queue\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200/201\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "pm.test(\"Response has queue_id\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"queue_id\");",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "var json = pm.response.json();",
+                  "if (json.queue_id) { pm.collectionVariables.set('tok_queue_id', json.queue_id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04 Create Queue (mixed mask + tokenize)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/one-to-one/create",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "one-to-one",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"queue_name\": \"scenario-masking-mixed-{{$timestamp}}\",\n  \"config\": {\n    \"masking_rules\": [\n      {\n        \"pattern\": \"PAN\",\n        \"mode\": \"tokenize\"\n      },\n      {\n        \"pattern\": \"SSN\",\n        \"mode\": \"mask\"\n      }\n    ],\n    \"max_queue_depth\": 1000,\n    \"max_message_age_seconds\": 3600\n  },\n  \"description\": \"mixed-mode scenario queue\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200/201\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "pm.test(\"Response has queue_id\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"queue_id\");",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "var json = pm.response.json();",
+                  "if (json.queue_id) { pm.collectionVariables.set('mixed_queue_id', json.queue_id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "05 Create Queue (key-value, tokenizing)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/key-value/create",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "key-value",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"queue_name\": \"scenario-masking-kv-{{$timestamp}}\",\n  \"config\": {\n    \"primary_key\": \"id\",\n    \"masking_rules\": [\n      {\n        \"pattern\": \"PAN\",\n        \"mode\": \"tokenize\"\n      }\n    ],\n    \"max_queue_depth\": 1000,\n    \"max_message_age_seconds\": 3600\n  },\n  \"description\": \"key-value masking scenario queue\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200/201\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "pm.test(\"Response has queue_id\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"queue_id\");",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "var json = pm.response.json();",
+                  "if (json.queue_id) { pm.collectionVariables.set('kv_queue_id', json.queue_id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "06 Create Client \u2014 Masker",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/clients",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "clients"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client_name\": \"masking-client-{{$timestamp}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200/201\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "pm.test(\"Response has client_id\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"client_id\");",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "var json = pm.response.json();",
+                  "if (json.client_id) { pm.collectionVariables.set('masker_id', json.client_id); }",
+                  "if (json.client_secret) { pm.collectionVariables.set('masker_secret', json.client_secret); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "07 Grant Masker Permission",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/clients/{{masker_id}}/queue-permissions/{{queue_id}}",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "clients",
+                "{{masker_id}}",
+                "queue-permissions",
+                "{{queue_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"can_publish\": true,\n  \"can_consume\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200/204\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 204]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "08 Login \u2014 Masker Client",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/clients/auth",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "clients",
+                "auth"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client_id\": \"{{masker_id}}\",\n  \"client_secret\": \"{{masker_secret}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"Response has access_token\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"access_token\");",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('masker_token', json.access_token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "09 Grant Masker Permission (tokenizing queue)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/clients/{{masker_id}}/queue-permissions/{{tok_queue_id}}",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "clients",
+                "{{masker_id}}",
+                "queue-permissions",
+                "{{tok_queue_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"can_publish\": true,\n  \"can_consume\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200/204\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 204]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "10 Grant Masker Permission (mixed queue)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/clients/{{masker_id}}/queue-permissions/{{mixed_queue_id}}",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "clients",
+                "{{masker_id}}",
+                "queue-permissions",
+                "{{mixed_queue_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"can_publish\": true,\n  \"can_consume\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200/204\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 204]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "11 Grant Masker Permission (key-value queue)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/clients/{{masker_id}}/queue-permissions/{{kv_queue_id}}",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "clients",
+                "{{masker_id}}",
+                "queue-permissions",
+                "{{kv_queue_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"can_publish\": true,\n  \"can_consume\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200/204\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 204]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "12 Preview \u2014 mask (irreversible)",
+      "item": [
+        {
+          "name": "12.01 Mask PAN (first 12 of 16 digits)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masker_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/client/apply-masking",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "client",
+                "apply-masking"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payload\": {\n    \"f\": \"4111111111117834\"\n  },\n  \"masking_rules\": [\n    {\n      \"pattern\": \"PAN\",\n      \"mode\": \"mask\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"masked_payload.f == XXXXXXXXXXXX7834\", function () {",
+                  "    pm.expect(pm.response.json().masked_payload.f).to.eql(\"XXXXXXXXXXXX7834\");",
+                  "});",
+                  "pm.test(\"raw PAN is gone\", function () {",
+                  "    pm.expect(JSON.stringify(pm.response.json())).to.not.include(\"4111111111117834\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "12.02 Mask preview returns NO key_id (nothing to reverse)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masker_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/client/apply-masking",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "client",
+                "apply-masking"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payload\": {\n    \"f\": \"4111111111117834\"\n  },\n  \"masking_rules\": [\n    {\n      \"pattern\": \"PAN\",\n      \"mode\": \"mask\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"no key_id for mask mode\", function () {",
+                  "    pm.expect(JSON.stringify(pm.response.json())).to.not.include(\"key_id\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "12.03 Mask SSN (first 5 of 9 digits)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masker_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/client/apply-masking",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "client",
+                "apply-masking"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payload\": {\n    \"f\": \"123-45-6789\"\n  },\n  \"masking_rules\": [\n    {\n      \"pattern\": \"SSN\",\n      \"mode\": \"mask\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"masked_payload.f == XXX-XX-6789\", function () {",
+                  "    pm.expect(pm.response.json().masked_payload.f).to.eql(\"XXX-XX-6789\");",
+                  "});",
+                  "pm.test(\"raw SSN is gone\", function () {",
+                  "    pm.expect(JSON.stringify(pm.response.json())).to.not.include(\"123-45-6789\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "12.04 Mask EMAIL (local part only)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masker_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/client/apply-masking",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "client",
+                "apply-masking"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payload\": {\n    \"f\": \"john.doe@example.com\"\n  },\n  \"masking_rules\": [\n    {\n      \"pattern\": \"EMAIL\",\n      \"mode\": \"mask\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"masked_payload.f == xxxx.xxx@example.com\", function () {",
+                  "    pm.expect(pm.response.json().masked_payload.f).to.eql(\"xxxx.xxx@example.com\");",
+                  "});",
+                  "pm.test(\"raw EMAIL is gone\", function () {",
+                  "    pm.expect(JSON.stringify(pm.response.json())).to.not.include(\"john.doe@example.com\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "12.05 Mask PHONE (all but last 4)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masker_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/client/apply-masking",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "client",
+                "apply-masking"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payload\": {\n    \"f\": \"555-867-5309\"\n  },\n  \"masking_rules\": [\n    {\n      \"pattern\": \"PHONE\",\n      \"mode\": \"mask\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"masked_payload.f == XXX-XXX-5309\", function () {",
+                  "    pm.expect(pm.response.json().masked_payload.f).to.eql(\"XXX-XXX-5309\");",
+                  "});",
+                  "pm.test(\"raw PHONE is gone\", function () {",
+                  "    pm.expect(JSON.stringify(pm.response.json())).to.not.include(\"555-867-5309\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "12.06 Mask all four patterns in one payload",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masker_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/client/apply-masking",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "client",
+                "apply-masking"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payload\": {\n    \"card\": \"4111111111117834\",\n    \"ssn\": \"123-45-6789\",\n    \"email\": \"john.doe@example.com\",\n    \"phone\": \"555-867-5309\",\n    \"note\": \"order 12345 ok\"\n  },\n  \"masking_rules\": [\n    {\n      \"pattern\": \"PAN\",\n      \"mode\": \"mask\"\n    },\n    {\n      \"pattern\": \"SSN\",\n      \"mode\": \"mask\"\n    },\n    {\n      \"pattern\": \"EMAIL\",\n      \"mode\": \"mask\"\n    },\n    {\n      \"pattern\": \"PHONE\",\n      \"mode\": \"mask\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"masked_payload.card == XXXXXXXXXXXX7834\", function () {",
+                  "    pm.expect(pm.response.json().masked_payload.card).to.eql(\"XXXXXXXXXXXX7834\");",
+                  "});",
+                  "pm.test(\"masked_payload.ssn == XXX-XX-6789\", function () {",
+                  "    pm.expect(pm.response.json().masked_payload.ssn).to.eql(\"XXX-XX-6789\");",
+                  "});",
+                  "pm.test(\"masked_payload.email == xxxx.xxx@example.com\", function () {",
+                  "    pm.expect(pm.response.json().masked_payload.email).to.eql(\"xxxx.xxx@example.com\");",
+                  "});",
+                  "pm.test(\"masked_payload.phone == XXX-XXX-5309\", function () {",
+                  "    pm.expect(pm.response.json().masked_payload.phone).to.eql(\"XXX-XXX-5309\");",
+                  "});",
+                  "pm.test(\"masked_payload.note == order 12345 ok\", function () {",
+                  "    pm.expect(pm.response.json().masked_payload.note).to.eql(\"order 12345 ok\");",
+                  "});",
+                  "pm.test(\"no raw PAN\", function () {",
+                  "    pm.expect(JSON.stringify(pm.response.json())).to.not.include(\"4111111111117834\");",
+                  "});",
+                  "pm.test(\"no raw SSN\", function () {",
+                  "    pm.expect(JSON.stringify(pm.response.json())).to.not.include(\"123-45-6789\");",
+                  "});",
+                  "pm.test(\"no raw email\", function () {",
+                  "    pm.expect(JSON.stringify(pm.response.json())).to.not.include(\"john.doe@example.com\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "13 Preview \u2014 payload traversal",
+      "item": [
+        {
+          "name": "13.01 Mask a nested + array payload (recursion)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masker_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/client/apply-masking",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "client",
+                "apply-masking"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payload\": {\n    \"customer\": {\n      \"card\": \"4111111111117834\",\n      \"ssn\": \"123-45-6789\"\n    },\n    \"contacts\": [\n      {\n        \"email\": \"john.doe@example.com\"\n      },\n      {\n        \"phone\": \"555-867-5309\"\n      }\n    ],\n    \"note\": \"order 12345 ok\"\n  },\n  \"masking_rules\": [\n    {\n      \"pattern\": \"PAN\",\n      \"mode\": \"mask\"\n    },\n    {\n      \"pattern\": \"SSN\",\n      \"mode\": \"mask\"\n    },\n    {\n      \"pattern\": \"EMAIL\",\n      \"mode\": \"mask\"\n    },\n    {\n      \"pattern\": \"PHONE\",\n      \"mode\": \"mask\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"masked_payload.customer.card == XXXXXXXXXXXX7834\", function () {",
+                  "    pm.expect(pm.response.json().masked_payload.customer.card).to.eql(\"XXXXXXXXXXXX7834\");",
+                  "});",
+                  "pm.test(\"masked_payload.customer.ssn == XXX-XX-6789\", function () {",
+                  "    pm.expect(pm.response.json().masked_payload.customer.ssn).to.eql(\"XXX-XX-6789\");",
+                  "});",
+                  "pm.test(\"masked_payload.contacts[0].email == xxxx.xxx@example.com\", function () {",
+                  "    pm.expect(pm.response.json().masked_payload.contacts[0].email).to.eql(\"xxxx.xxx@example.com\");",
+                  "});",
+                  "pm.test(\"masked_payload.contacts[1].phone == XXX-XXX-5309\", function () {",
+                  "    pm.expect(pm.response.json().masked_payload.contacts[1].phone).to.eql(\"XXX-XXX-5309\");",
+                  "});",
+                  "pm.test(\"masked_payload.note == order 12345 ok\", function () {",
+                  "    pm.expect(pm.response.json().masked_payload.note).to.eql(\"order 12345 ok\");",
+                  "});",
+                  "pm.test(\"no raw PAN anywhere\", function () {",
+                  "    pm.expect(JSON.stringify(pm.response.json())).to.not.include(\"4111111111117834\");",
+                  "});",
+                  "pm.test(\"no raw SSN anywhere\", function () {",
+                  "    pm.expect(JSON.stringify(pm.response.json())).to.not.include(\"123-45-6789\");",
+                  "});",
+                  "pm.test(\"no raw email anywhere\", function () {",
+                  "    pm.expect(JSON.stringify(pm.response.json())).to.not.include(\"john.doe@example.com\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "14 Preview \u2014 tokenize + detokenize (reversible)",
+      "item": [
+        {
+          "name": "14.01 Tokenize PAN (capture the token)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masker_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/client/apply-masking",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "client",
+                "apply-masking"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payload\": {\n    \"f\": \"4111111111117834\"\n  },\n  \"masking_rules\": [\n    {\n      \"pattern\": \"PAN\",\n      \"mode\": \"tokenize\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"raw PAN is gone\", function () {",
+                  "    pm.expect(JSON.stringify(pm.response.json())).to.not.include(\"4111111111117834\");",
+                  "});",
+                  "pm.test(\"last 4 digits preserved\", function () {",
+                  "    pm.expect(JSON.stringify(pm.response.json())).to.include(\"7834\");",
+                  "});",
+                  "pm.test(\"not merely masked (tokens are not X)\", function () {",
+                  "    pm.expect(JSON.stringify(pm.response.json())).to.not.include(\"XXXXXXXXXXXX7834\");",
+                  "});",
+                  "pm.test(\"Response has key_id\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"key_id\");",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('tok_pan', json.masked_payload.f);",
+                  "if (json.key_id) { pm.collectionVariables.set('tok_key_id', json.key_id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "14.02 Tokenize the same PAN again \u2014 deterministic",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masker_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/client/apply-masking",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "client",
+                "apply-masking"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payload\": {\n    \"f\": \"4111111111117834\"\n  },\n  \"masking_rules\": [\n    {\n      \"pattern\": \"PAN\",\n      \"mode\": \"tokenize\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"masked_payload.f == {{tok_pan}}\", function () {",
+                  "    pm.expect(pm.response.json().masked_payload.f).to.eql(pm.environment.get(\"tok_pan\"));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "14.03 Detokenize restores the original PAN",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masker_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/client/detokenize",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "client",
+                "detokenize"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payload\": {\n    \"f\": \"{{tok_pan}}\"\n  },\n  \"key_id\": \"{{tok_key_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"detokenized_payload.f == 4111111111117834\", function () {",
+                  "    pm.expect(pm.response.json().detokenized_payload.f).to.eql(\"4111111111117834\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "14.04 Tokenize EMAIL (capture the token)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masker_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/client/apply-masking",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "client",
+                "apply-masking"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payload\": {\n    \"f\": \"john.doe@example.com\"\n  },\n  \"masking_rules\": [\n    {\n      \"pattern\": \"EMAIL\",\n      \"mode\": \"tokenize\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"raw email is gone\", function () {",
+                  "    pm.expect(JSON.stringify(pm.response.json())).to.not.include(\"john.doe@example.com\");",
+                  "});",
+                  "pm.test(\"domain preserved\", function () {",
+                  "    pm.expect(JSON.stringify(pm.response.json())).to.include(\"@example.com\");",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('tok_email', json.masked_payload.f);",
+                  "if (json.key_id) { pm.collectionVariables.set('tok_key_id', json.key_id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "14.05 Detokenize restores the original email",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masker_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/client/detokenize",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "client",
+                "detokenize"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payload\": {\n    \"f\": \"{{tok_email}}\"\n  },\n  \"key_id\": \"{{tok_key_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"detokenized_payload.f == john.doe@example.com\", function () {",
+                  "    pm.expect(pm.response.json().detokenized_payload.f).to.eql(\"john.doe@example.com\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "14.06 Detokenize leaves MASKED data unchanged (mask is one-way)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masker_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/client/detokenize",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "client",
+                "detokenize"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payload\": {\n    \"f\": \"XXXXXXXXXXXX7834\"\n  },\n  \"key_id\": \"{{tok_key_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"detokenized_payload.f == XXXXXXXXXXXX7834\", function () {",
+                  "    pm.expect(pm.response.json().detokenized_payload.f).to.eql(\"XXXXXXXXXXXX7834\");",
+                  "});",
+                  "pm.test(\"no digits invented\", function () {",
+                  "    pm.expect(JSON.stringify(pm.response.json())).to.not.include(\"4111111111117834\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "14.07 Tokenize SSN (capture the token)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masker_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/client/apply-masking",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "client",
+                "apply-masking"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payload\": {\n    \"f\": \"123-45-6789\"\n  },\n  \"masking_rules\": [\n    {\n      \"pattern\": \"SSN\",\n      \"mode\": \"tokenize\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"raw SSN is gone\", function () {",
+                  "    pm.expect(JSON.stringify(pm.response.json())).to.not.include(\"123-45-6789\");",
+                  "});",
+                  "pm.test(\"not merely masked\", function () {",
+                  "    pm.expect(JSON.stringify(pm.response.json())).to.not.include(\"XXX-XX-6789\");",
+                  "});",
+                  "pm.test(\"Response has key_id\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"key_id\");",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('tok_ssn', json.masked_payload.f);",
+                  "if (json.key_id) { pm.collectionVariables.set('tok_key_id', json.key_id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "14.08 Detokenize restores the original SSN",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masker_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/client/detokenize",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "client",
+                "detokenize"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payload\": {\n    \"f\": \"{{tok_ssn}}\"\n  },\n  \"key_id\": \"{{tok_key_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"detokenized_payload.f == 123-45-6789\", function () {",
+                  "    pm.expect(pm.response.json().detokenized_payload.f).to.eql(\"123-45-6789\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "14.09 Tokenize PHONE (capture the token)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masker_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/client/apply-masking",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "client",
+                "apply-masking"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payload\": {\n    \"f\": \"555-867-5309\"\n  },\n  \"masking_rules\": [\n    {\n      \"pattern\": \"PHONE\",\n      \"mode\": \"tokenize\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"raw PHONE is gone\", function () {",
+                  "    pm.expect(JSON.stringify(pm.response.json())).to.not.include(\"555-867-5309\");",
+                  "});",
+                  "pm.test(\"not merely masked\", function () {",
+                  "    pm.expect(JSON.stringify(pm.response.json())).to.not.include(\"XXX-XXX-5309\");",
+                  "});",
+                  "pm.test(\"last 4 digits preserved\", function () {",
+                  "    pm.expect(JSON.stringify(pm.response.json())).to.include(\"5309\");",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('tok_phone', json.masked_payload.f);",
+                  "if (json.key_id) { pm.collectionVariables.set('tok_key_id', json.key_id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "14.10 Detokenize restores the original phone",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masker_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/client/detokenize",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "client",
+                "detokenize"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payload\": {\n    \"f\": \"{{tok_phone}}\"\n  },\n  \"key_id\": \"{{tok_key_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"detokenized_payload.f == 555-867-5309\", function () {",
+                  "    pm.expect(pm.response.json().detokenized_payload.f).to.eql(\"555-867-5309\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "14.11 Detokenize with the explicit key_id from the preview",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masker_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/client/detokenize",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "client",
+                "detokenize"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payload\": {\n    \"f\": \"{{tok_pan}}\"\n  },\n  \"key_id\": \"{{tok_key_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"detokenized_payload.f == 4111111111117834\", function () {",
+                  "    pm.expect(pm.response.json().detokenized_payload.f).to.eql(\"4111111111117834\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "14.12 Detokenize without a key_id is rejected",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masker_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/client/detokenize",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "client",
+                "detokenize"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payload\": {\n    \"f\": \"{{tok_pan}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400/422\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([400, 422]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "14.13 Detokenize with an unknown key_id -> 404",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masker_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/client/detokenize",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "client",
+                "detokenize"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payload\": {\n    \"f\": \"{{tok_pan}}\"\n  },\n  \"key_id\": \"no-such-key-id\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 404\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([404]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "15 Masking rule validation",
+      "item": [
+        {
+          "name": "15.01 Reject unknown pattern",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masker_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/client/apply-masking",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "client",
+                "apply-masking"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payload\": {\n    \"f\": \"x\"\n  },\n  \"masking_rules\": [\n    {\n      \"pattern\": \"IBAN\",\n      \"mode\": \"mask\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([400]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "15.02 Reject unknown mode",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masker_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/client/apply-masking",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "client",
+                "apply-masking"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payload\": {\n    \"f\": \"x\"\n  },\n  \"masking_rules\": [\n    {\n      \"pattern\": \"PAN\",\n      \"mode\": \"encrypt\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([400]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "15.03 Reject duplicate pattern",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masker_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/client/apply-masking",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "client",
+                "apply-masking"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payload\": {\n    \"f\": \"x\"\n  },\n  \"masking_rules\": [\n    {\n      \"pattern\": \"PAN\",\n      \"mode\": \"mask\"\n    },\n    {\n      \"pattern\": \"PAN\",\n      \"mode\": \"tokenize\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([400]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "15.04 Reject unauthenticated preview",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/client/apply-masking",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "client",
+                "apply-masking"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payload\": {\n    \"f\": \"x\"\n  },\n  \"masking_rules\": [\n    {\n      \"pattern\": \"PAN\",\n      \"mode\": \"mask\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 401/403\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([401, 403]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "16 End to end \u2014 queue masking_rules (mask)",
+      "item": [
+        {
+          "name": "16.01 Publish sensitive payload (mask queue)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masker_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/publish",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "publish"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payload\": {\n    \"card\": \"4111111111117834\",\n    \"ssn\": \"123-45-6789\",\n    \"email\": \"john.doe@example.com\",\n    \"phone\": \"555-867-5309\",\n    \"note\": \"order 12345 ok\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200/202\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 202]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "16.02 Consume \u2014 data is masked and stays masked",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masker_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/consume",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "consume"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"card == XXXXXXXXXXXX7834\", function () {",
+                  "    pm.expect(pm.response.json().card).to.eql(\"XXXXXXXXXXXX7834\");",
+                  "});",
+                  "pm.test(\"ssn == XXX-XX-6789\", function () {",
+                  "    pm.expect(pm.response.json().ssn).to.eql(\"XXX-XX-6789\");",
+                  "});",
+                  "pm.test(\"email == xxxx.xxx@example.com\", function () {",
+                  "    pm.expect(pm.response.json().email).to.eql(\"xxxx.xxx@example.com\");",
+                  "});",
+                  "pm.test(\"phone == XXX-XXX-5309\", function () {",
+                  "    pm.expect(pm.response.json().phone).to.eql(\"XXX-XXX-5309\");",
+                  "});",
+                  "pm.test(\"note == order 12345 ok\", function () {",
+                  "    pm.expect(pm.response.json().note).to.eql(\"order 12345 ok\");",
+                  "});",
+                  "pm.test(\"raw PAN never survives publish\", function () {",
+                  "    pm.expect(JSON.stringify(pm.response.json())).to.not.include(\"4111111111117834\");",
+                  "});",
+                  "pm.test(\"raw SSN never survives publish\", function () {",
+                  "    pm.expect(JSON.stringify(pm.response.json())).to.not.include(\"123-45-6789\");",
+                  "});",
+                  "pm.test(\"no tokenization key id\", function () {",
+                  "    pm.expect(pm.response.headers.get(\"X-Message-Headers\")).to.not.include(\"x-tokenization-key-id\");",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "var json = pm.response.json();",
+                  "var messageId = pm.response.headers.get('X-Message-Id') || json.message_id;",
+                  "var leaseId = pm.response.headers.get('X-Lease-Id') || json.lease_id;",
+                  "if (messageId) { pm.collectionVariables.set('message_id', messageId); }",
+                  "if (leaseId) { pm.collectionVariables.set('lease_id', leaseId); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "16.03 Ack masked message",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masker_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{queue_id}}/ack",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{queue_id}}",
+                "ack"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message_id\": \"{{message_id}}\",\n  \"lease_id\": \"{{lease_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"status == ok\", function () {",
+                  "    pm.expect(pm.response.json().status).to.eql(\"ok\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "17 End to end \u2014 queue masking_rules (tokenize)",
+      "item": [
+        {
+          "name": "17.01 Publish sensitive payload (tokenize queue)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masker_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{tok_queue_id}}/publish",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{tok_queue_id}}",
+                "publish"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payload\": {\n    \"card\": \"4111111111117834\",\n    \"email\": \"john.doe@example.com\",\n    \"note\": \"order 12345 ok\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200/202\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 202]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "17.02 Consume \u2014 data is delivered TOKENIZED (not reversed)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masker_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{tok_queue_id}}/consume",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{tok_queue_id}}",
+                "consume"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"raw PAN is NOT delivered\", function () {",
+                  "    pm.expect(JSON.stringify(pm.response.json())).to.not.include(\"4111111111117834\");",
+                  "});",
+                  "pm.test(\"raw email is NOT delivered\", function () {",
+                  "    pm.expect(JSON.stringify(pm.response.json())).to.not.include(\"john.doe@example.com\");",
+                  "});",
+                  "pm.test(\"note == order 12345 ok\", function () {",
+                  "    pm.expect(pm.response.json().note).to.eql(\"order 12345 ok\");",
+                  "});",
+                  "pm.test(\"tokenization key id recorded\", function () {",
+                  "    pm.expect(pm.response.headers.get(\"X-Message-Headers\")).to.include(\"x-tokenization-key-id\");",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "var json = pm.response.json();",
+                  "var messageId = pm.response.headers.get('X-Message-Id') || json.message_id;",
+                  "var leaseId = pm.response.headers.get('X-Lease-Id') || json.lease_id;",
+                  "if (messageId) { pm.collectionVariables.set('message_id', messageId); }",
+                  "if (leaseId) { pm.collectionVariables.set('lease_id', leaseId); }",
+                  "pm.collectionVariables.set('consumed_card', pm.response.json().card);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "17.03 Ack tokenized message",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masker_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{tok_queue_id}}/ack",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{tok_queue_id}}",
+                "ack"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message_id\": \"{{message_id}}\",\n  \"lease_id\": \"{{lease_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"status == ok\", function () {",
+                  "    pm.expect(pm.response.json().status).to.eql(\"ok\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "17.04 Consumer detokenizes explicitly (separate authorized step)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masker_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/client/detokenize",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "client",
+                "detokenize"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payload\": {\n    \"f\": \"{{consumed_card}}\"\n  },\n  \"key_id\": \"{{tok_key_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"detokenized_payload.f == 4111111111117834\", function () {",
+                  "    pm.expect(pm.response.json().detokenized_payload.f).to.eql(\"4111111111117834\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "18 End to end \u2014 mixed mask + tokenize on one queue",
+      "item": [
+        {
+          "name": "18.01 Publish to the mixed-mode queue",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masker_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{mixed_queue_id}}/publish",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{mixed_queue_id}}",
+                "publish"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payload\": {\n    \"card\": \"4111111111117834\",\n    \"ssn\": \"123-45-6789\",\n    \"note\": \"order 12345 ok\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200/202\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 202]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "18.02 Consume \u2014 SSN masked, PAN tokenized, both un-reversed",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masker_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{mixed_queue_id}}/consume",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{mixed_queue_id}}",
+                "consume"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"ssn == XXX-XX-6789\", function () {",
+                  "    pm.expect(pm.response.json().ssn).to.eql(\"XXX-XX-6789\");",
+                  "});",
+                  "pm.test(\"note == order 12345 ok\", function () {",
+                  "    pm.expect(pm.response.json().note).to.eql(\"order 12345 ok\");",
+                  "});",
+                  "pm.test(\"raw PAN not delivered\", function () {",
+                  "    pm.expect(JSON.stringify(pm.response.json())).to.not.include(\"4111111111117834\");",
+                  "});",
+                  "pm.test(\"raw SSN not delivered\", function () {",
+                  "    pm.expect(JSON.stringify(pm.response.json())).to.not.include(\"123-45-6789\");",
+                  "});",
+                  "pm.test(\"key id recorded (a tokenize rule fired)\", function () {",
+                  "    pm.expect(pm.response.headers.get(\"X-Message-Headers\")).to.include(\"x-tokenization-key-id\");",
+                  "});",
+                  "",
+                  "// --- capture ---",
+                  "var json = pm.response.json();",
+                  "var messageId = pm.response.headers.get('X-Message-Id') || json.message_id;",
+                  "var leaseId = pm.response.headers.get('X-Lease-Id') || json.lease_id;",
+                  "if (messageId) { pm.collectionVariables.set('message_id', messageId); }",
+                  "if (leaseId) { pm.collectionVariables.set('lease_id', leaseId); }",
+                  "pm.collectionVariables.set('mixed_card', pm.response.json().card);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "18.03 Ack mixed message",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masker_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{mixed_queue_id}}/ack",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{mixed_queue_id}}",
+                "ack"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message_id\": \"{{message_id}}\",\n  \"lease_id\": \"{{lease_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"status == ok\", function () {",
+                  "    pm.expect(pm.response.json().status).to.eql(\"ok\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "18.04 Tokenized field reverses; masked field does not",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masker_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/client/detokenize",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "client",
+                "detokenize"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payload\": {\n    \"card\": \"{{mixed_card}}\",\n    \"ssn\": \"XXX-XX-6789\"\n  },\n  \"key_id\": \"{{tok_key_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"detokenized_payload.card == 4111111111117834\", function () {",
+                  "    pm.expect(pm.response.json().detokenized_payload.card).to.eql(\"4111111111117834\");",
+                  "});",
+                  "pm.test(\"detokenized_payload.ssn == XXX-XX-6789\", function () {",
+                  "    pm.expect(pm.response.json().detokenized_payload.ssn).to.eql(\"XXX-XX-6789\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "19 End to end \u2014 key-value read path (/items)",
+      "item": [
+        {
+          "name": "19.01 Publish to the key-value queue",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masker_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{kv_queue_id}}/publish",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{kv_queue_id}}",
+                "publish"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payload\": {\n    \"id\": \"KV1\",\n    \"card\": \"4111111111117834\",\n    \"note\": \"order 12345 ok\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"status == ok\", function () {",
+                  "    pm.expect(pm.response.json().status).to.eql(\"ok\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "19.02 List items \u2014 still tokenized (items never detokenizes)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masker_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{kv_queue_id}}/items",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{kv_queue_id}}",
+                "items"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"Response has items\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"items\");",
+                  "});",
+                  "pm.test(\"items has more than 0\", function () {",
+                  "    pm.expect(pm.response.json().items.length).to.be.at.least(1);",
+                  "});",
+                  "pm.test(\"items[0].payload.note == order 12345 ok\", function () {",
+                  "    pm.expect(pm.response.json().items[0].payload.note).to.eql(\"order 12345 ok\");",
+                  "});",
+                  "pm.test(\"raw PAN not returned by /items\", function () {",
+                  "    pm.expect(JSON.stringify(pm.response.json())).to.not.include(\"4111111111117834\");",
+                  "});",
+                  "pm.test(\"key id travels with the item\", function () {",
+                  "    pm.expect(JSON.stringify(pm.response.json())).to.include(\"x-tokenization-key-id\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "19.03 Get item by key \u2014 still tokenized",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masker_token}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tenant_exp_url}}/queues/{{kv_queue_id}}/items/by_key",
+              "host": [
+                "{{tenant_exp_url}}"
+              ],
+              "path": [
+                "queues",
+                "{{kv_queue_id}}",
+                "items",
+                "by_key"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"primary_key_values\": [\n    \"KV1\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"Response has items\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"items\");",
+                  "});",
+                  "pm.test(\"raw PAN not returned by /items/by_key\", function () {",
+                  "    pm.expect(JSON.stringify(pm.response.json())).to.not.include(\"4111111111117834\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "tenant_exp_url",
+      "value": ""
+    },
+    {
+      "key": "user_email",
+      "value": ""
+    },
+    {
+      "key": "user_password",
+      "value": ""
+    },
+    {
+      "key": "queue_id",
+      "value": ""
+    }
+  ]
+}
