@@ -7,14 +7,15 @@ cross-tenant fan-out, and more) from Postman.
 ## Quick start
 
 1. **Import the collections** in [`collections/`](collections/) into Postman.
-2. **Import the environment** [`datalinknexus-tenant.postman_environment.json`](datalinknexus-tenant.postman_environment.json) and set:
-   - `tenant_exp_url` → `https://example.dev.datalinknexus.com` (the public demo tenant)
-   - `user_email` / `user_password` → the demo login (published with the demo)
-3. Pick a collection and hit **Run**. The auth/setup requests run first and populate the rest.
+2. **Import the environment** [`datalinknexus-tenant.postman_environment.json`](datalinknexus-tenant.postman_environment.json).
+   It already points at the public demo tenant (`tenant_exp_url = https://example.dev.datalinknexus.com`)
+   and user `demo@datalinknexus.com` — just fill in **`user_password`** with the demo password.
+3. Select the environment, pick a collection, and hit **Run**. The auth/setup requests run first and
+   populate the variables the rest of the collection needs.
 
 > The demo tenant is a shared sandbox — please be gentle; data may reset periodically.
 
-## What's in here
+## What's in here (18 collections)
 
 **Queue types**
 - `one-to-one`, `one-to-many` — point-to-point and fan-out delivery
@@ -35,7 +36,6 @@ cross-tenant fan-out, and more) from Postman.
 - `feedback` — bug/feature reporting
 - `file-upload` — document upload
 - `cross-tenant` — cross-tenant subscription fan-out
-- `perf-one-to-one` — a lightweight throughput check
 
 ## Notes
 
